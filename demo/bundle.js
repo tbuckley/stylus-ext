@@ -23713,11 +23713,15 @@
   }
 
   // src/layer.js
+  function deg2rad(deg) {
+    return deg / 360 * Math.PI * 2;
+  }
   customElements.define("stylus-layer", class extends HTMLElement {
     constructor() {
       super();
       this.pointers = {};
       this.updateRequested = false;
+      this.supportsTilt = false;
       this.scene = new Scene();
       const FOV = 40;
       this.camera = new PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.1, 2e3);
@@ -23737,7 +23741,7 @@
       canvas.style.top = "0";
       const ambient = new AmbientLight(16777215, 0.5);
       this.scene.add(ambient);
-      const directionalLight = new DirectionalLight(65280, 1, 500);
+      const directionalLight = new DirectionalLight(16777215, 1, 500);
       directionalLight.position.set(-250, 250, 500);
       directionalLight.castShadow = true;
       directionalLight.shadow.radius = 20;
@@ -23788,23 +23792,24 @@
         this.scene.add(obj);
         return obj;
       }
-      const STYLUS_RADIUS = 18;
+      const STYLUS_RADIUS = 14;
       const STYLUS_HEIGHT = 250;
+      const TIP_HEIGHT = STYLUS_RADIUS * 4;
       const group = new Group();
       const material = new MeshPhongMaterial({color: 8421504, dithering: true});
       const cylGeometry = new CylinderGeometry(STYLUS_RADIUS, STYLUS_RADIUS, STYLUS_HEIGHT, 32);
       const cyl = new Mesh(cylGeometry, material);
       cyl.castShadow = true;
-      cyl.rotateX(90 / 360 * Math.PI * 2);
-      cyl.position.set(0, 0, STYLUS_HEIGHT / 2 + STYLUS_RADIUS * 3);
+      cyl.rotateX(deg2rad(90));
+      cyl.position.set(0, 0, STYLUS_HEIGHT / 2 + TIP_HEIGHT);
       group.add(cyl);
-      const coneGeometry = new ConeGeometry(STYLUS_RADIUS, STYLUS_RADIUS * 3, 32);
+      const coneGeometry = new ConeGeometry(STYLUS_RADIUS, TIP_HEIGHT, 32);
       const cone = new Mesh(coneGeometry, material);
       cone.castShadow = true;
-      cone.rotateX(-90 / 360 * Math.PI * 2);
-      cone.position.set(0, 0, STYLUS_RADIUS * 3 / 2);
+      cone.rotateX(deg2rad(-90));
+      cone.position.set(0, 0, TIP_HEIGHT / 2);
       group.add(cone);
-      group.rotateY(45 / 360 * Math.PI * 2);
+      group.rotateY(deg2rad(45));
       this.scene.add(group);
       return group;
     }
@@ -23812,6 +23817,10 @@
       const w2 = window.innerHeight / 2;
       const y = w2 - (e.clientY - w2);
       obj.position.set(e.clientX, y, 0);
+      if (e.tiltX && e.tiltY) {
+        obj.rotation.y = deg2rad(e.tiltX);
+        obj.rotation.x = deg2rad(e.tiltY);
+      }
     }
     _down(e) {
       this.pointers[e.pointerId] = this._createObject(e);

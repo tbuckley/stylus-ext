@@ -1,5 +1,9 @@
 import * as THREE from "three";
 
+function deg2rad(deg) {
+    return deg / 360 * Math.PI * 2;
+}
+
 customElements.define("stylus-layer", class extends HTMLElement {
     constructor() {
         super();
@@ -7,6 +11,7 @@ customElements.define("stylus-layer", class extends HTMLElement {
         // Properties
         this.pointers = {};
         this.updateRequested = false;
+        this.supportsTilt = false;
 
         // Scene
         this.scene = new THREE.Scene();
@@ -39,7 +44,7 @@ customElements.define("stylus-layer", class extends HTMLElement {
         const ambient = new THREE.AmbientLight( 0xffffff, 0.5 );
         this.scene.add( ambient );
 
-        const directionalLight = new THREE.DirectionalLight( 0x00ff00, 1, 500 );
+        const directionalLight = new THREE.DirectionalLight( 0xffffff, 1, 500 );
         directionalLight.position.set( -250, 250, 500 );
         directionalLight.castShadow = true;
         directionalLight.shadow.radius = 20;
@@ -97,8 +102,10 @@ customElements.define("stylus-layer", class extends HTMLElement {
             this.scene.add(obj);
             return obj;
         }
-        const STYLUS_RADIUS = 18;
+
+        const STYLUS_RADIUS = 14;
         const STYLUS_HEIGHT = 250;
+        const TIP_HEIGHT = STYLUS_RADIUS*4;
 
         const group = new THREE.Group();
         const material = new THREE.MeshPhongMaterial( { color: 0x808080, dithering: true } );
@@ -106,18 +113,18 @@ customElements.define("stylus-layer", class extends HTMLElement {
         const cylGeometry = new THREE.CylinderGeometry( STYLUS_RADIUS, STYLUS_RADIUS, STYLUS_HEIGHT, 32 );
         const cyl = new THREE.Mesh( cylGeometry, material );
         cyl.castShadow = true
-        cyl.rotateX(90/360*Math.PI*2);
-        cyl.position.set(0, 0, STYLUS_HEIGHT/2+STYLUS_RADIUS*3);
+        cyl.rotateX(deg2rad(90));
+        cyl.position.set(0, 0, STYLUS_HEIGHT/2+TIP_HEIGHT);
         group.add(cyl);
 
-        const coneGeometry = new THREE.ConeGeometry( STYLUS_RADIUS, STYLUS_RADIUS*3, 32 );
+        const coneGeometry = new THREE.ConeGeometry( STYLUS_RADIUS, TIP_HEIGHT, 32 );
         const cone = new THREE.Mesh( coneGeometry, material );
         cone.castShadow = true
-        cone.rotateX(-90/360*Math.PI*2);
-        cone.position.set(0, 0, STYLUS_RADIUS*3/2);
+        cone.rotateX(deg2rad(-90));
+        cone.position.set(0, 0, TIP_HEIGHT/2);
         group.add(cone);
 
-        group.rotateY(45/360*Math.PI*2);
+        group.rotateY(deg2rad(45));
 
         this.scene.add( group );
         return group;
@@ -126,7 +133,12 @@ customElements.define("stylus-layer", class extends HTMLElement {
         const w2 = window.innerHeight / 2;
         const y = w2 - (e.clientY - w2);
         obj.position.set( e.clientX, y, 0 );
-        // obj.position.set(e.clientX, e.clientY, 50);
+
+        // Detect tilt support
+        if(e.tiltX && e.tiltY) {
+           obj.rotation.y = deg2rad(e.tiltX);
+           obj.rotation.x = deg2rad(e.tiltY);
+        }
     }
     _down(e) {
         this.pointers[e.pointerId] = this._createObject(e);
