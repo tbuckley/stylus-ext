@@ -12,11 +12,12 @@ customElements.define("stylus-layer", class extends HTMLElement {
         this.scene = new THREE.Scene();
         
         // Camera
-        // this.camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
-        // const z = (window.innerHeight / 2) / Math.tan(30 / 360 * 2 * Math.PI);
-        // this.camera.position.set(window.innerWidth/2, window.innerHeight/2, z);
-        this.camera = new THREE.OrthographicCamera(0,window.innerWidth,window.innerHeight,0,0.1,1000);
-        this.camera.position.set(0, 0, 500);
+        const FOV = 40;
+        this.camera = new THREE.PerspectiveCamera( FOV, window.innerWidth / window.innerHeight, 0.1, 2000 );
+        const z = (window.innerHeight / 2) / Math.tan((FOV / 2) / 360 * 2 * Math.PI);
+        this.camera.position.set(window.innerWidth/2, window.innerHeight/2, z);
+        // this.camera = new THREE.OrthographicCamera(0,window.innerWidth,window.innerHeight,0,0.1,1000);
+        // this.camera.position.set(0, 0, 500);
 
         this.renderer = new THREE.WebGLRenderer({ alpha: true });
         this.renderer.setSize( window.innerWidth, window.innerHeight );
@@ -37,16 +38,6 @@ customElements.define("stylus-layer", class extends HTMLElement {
         // Add lights
         const ambient = new THREE.AmbientLight( 0xffffff, 0.5 );
         this.scene.add( ambient );
-
-        // const light = new THREE.PointLight( 0xff0000, 1, 10000);
-        // light.position.set( 0, window.innerHeight, 500 );
-        // light.castShadow = true;
-        // light.shadow.mapSize.width = 2056;
-        // light.shadow.mapSize.height = 2056;
-        // light.shadow.radius = 12;
-        // light.shadow.camera.far = 1000;
-        // this.scene.add( light );
-        // this.scene.add(new THREE.CameraHelper(light.shadow.camera));
 
         const directionalLight = new THREE.DirectionalLight( 0xff0000, 1, 500 );
         directionalLight.position.set( -100, 100, 200 );

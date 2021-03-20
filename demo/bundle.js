@@ -23719,8 +23719,10 @@
       this.pointers = {};
       this.updateRequested = false;
       this.scene = new Scene();
-      this.camera = new OrthographicCamera(0, window.innerWidth, window.innerHeight, 0, 0.1, 1e3);
-      this.camera.position.set(0, 0, 500);
+      const FOV = 40;
+      this.camera = new PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.1, 2e3);
+      const z = window.innerHeight / 2 / Math.tan(FOV / 2 / 360 * 2 * Math.PI);
+      this.camera.position.set(window.innerWidth / 2, window.innerHeight / 2, z);
       this.renderer = new WebGLRenderer({alpha: true});
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.renderer.setClearColor(0, 0);
