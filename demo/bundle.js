@@ -23751,7 +23751,7 @@
       directionalLight.shadow.camera.right = window.innerWidth;
       directionalLight.shadow.camera.top = window.innerHeight + 200;
       directionalLight.shadow.camera.bottom = 0;
-      directionalLight.shadow.camera.far = 1e3;
+      directionalLight.shadow.camera.far = 2e3;
       this.scene.add(directionalLight);
       const planeGeometry = new PlaneGeometry(window.innerWidth, window.innerHeight, 32, 32);
       const planeMaterial = new ShadowMaterial();
@@ -23817,7 +23817,7 @@
       const w2 = window.innerHeight / 2;
       const y = w2 - (e.clientY - w2);
       obj.position.set(e.clientX, y, 0);
-      if (e.tiltX && e.tiltY) {
+      if (e.tiltX || e.tiltY) {
         obj.rotation.y = deg2rad(e.tiltX);
         obj.rotation.x = deg2rad(e.tiltY);
       }

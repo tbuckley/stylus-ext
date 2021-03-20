@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import '@webcomponents/custom-elements';
 
 function deg2rad(deg) {
     return deg / 360 * Math.PI * 2;
@@ -54,7 +55,13 @@ customElements.define("stylus-layer", class extends HTMLElement {
         directionalLight.shadow.camera.right = window.innerWidth;
         directionalLight.shadow.camera.top = window.innerHeight+200;
         directionalLight.shadow.camera.bottom = 0;
-        directionalLight.shadow.camera.far = 1000;
+
+        // const dx = -250 - window.innerWidth;
+        // const dy = Math.max(250, window.innerHeight-250);
+        // const dz = 500;
+        // const dist = Math.sqrt(dx*dx+dy*dy+dz*dz);
+
+        directionalLight.shadow.camera.far = 2000;
         this.scene.add( directionalLight );
         // this.scene.add( new THREE.CameraHelper(directionalLight.shadow.camera) );
 
@@ -135,7 +142,7 @@ customElements.define("stylus-layer", class extends HTMLElement {
         obj.position.set( e.clientX, y, 0 );
 
         // Detect tilt support
-        if(e.tiltX && e.tiltY) {
+        if(e.tiltX || e.tiltY) {
            obj.rotation.y = deg2rad(e.tiltX);
            obj.rotation.x = deg2rad(e.tiltY);
         }

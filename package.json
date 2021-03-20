@@ -4,13 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "esbuild src/layer.js --bundle --watch --outfile=demo/bundle.js",
+    "demo": "esbuild src/layer.js --bundle --watch --outfile=demo/bundle.js",
+    "build": "esbuild src/layer.js --bundle --outfile=extension/bundle.js",
+    "build:watch": "esbuild src/layer.js --bundle --watch --outfile=extension/bundle.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@webcomponents/custom-elements": "^1.4.3",
     "esbuild": "^0.9.5",
     "three": "^0.126.1"
   }
