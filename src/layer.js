@@ -1,8 +1,18 @@
 import * as THREE from "three";
 import '@webcomponents/custom-elements';
+import * as TWEEN from "@tweenjs/tween.js";
 
 function deg2rad(deg) {
     return deg / 360 * Math.PI * 2;
+}
+
+function setOpacity(obj, opacity) {
+    obj.children.forEach((child) => {
+        setOpacity( child, opacity );
+    });
+    if ( obj.material ) {
+        obj.material.opacity = opacity;
+    };
 }
 
 customElements.define("stylus-layer", class extends HTMLElement {
@@ -72,6 +82,7 @@ customElements.define("stylus-layer", class extends HTMLElement {
         const plane = new THREE.Mesh( planeGeometry, planeMaterial );
         plane.receiveShadow = true;
         plane.position.set(window.innerWidth/2, window.innerHeight/2, 0);
+        this.shadowPlane = plane;
         this.scene.add( plane );
 
         this.renderer.render( this.scene, this.camera );
@@ -90,13 +101,18 @@ customElements.define("stylus-layer", class extends HTMLElement {
         if(!this.updateRequested) {
             this.updateRequested = true;
             requestAnimationFrame(() => {
-                this._update();
                 this.updateRequested = false;
+                this._update();
             });
         }
     }
     _update() {
+        console.log("update", TWEEN.getAll().length);
+        TWEEN.update();
         this.renderer.render( this.scene, this.camera );
+        if(TWEEN.getAll().length > 0) {
+            this._requestUpdate();
+        }
     }
     _createObject(e) {
         if(e.pointerType === "mouse") {
@@ -158,6 +174,11 @@ customElements.define("stylus-layer", class extends HTMLElement {
         if(!(id in this.pointers)) {
             this.pointers[id] = this._createObject(e);
         }
+        if(e.pointerType === "pen" && this.tween) {
+            this.tween.stop();
+            setOpacity(this.pointers[id], 1);
+            setOpacity(this.shadowPlane, 0.1);
+        }
         this._setObjPosition(this.pointers[id], e);
         this._requestUpdate();
     }
@@ -174,7 +195,27 @@ customElements.define("stylus-layer", class extends HTMLElement {
             this.scene.remove(this.pointers[id]);
             delete this.pointers[id];
         } else {
-            this.pointers[id].position.z = 50;
+            const lift = new TWEEN.Tween(this.pointers[id].position);
+            lift.to({z: 30}, 150);
+
+            const fadeOut = new TWEEN.Tween({opacity: 1});
+            fadeOut.to({opacity: 0}, 150);
+            fadeOut.delay(500);
+            lift.chain(fadeOut);
+
+            lift.onUpdate(() => {
+                this._requestUpdate();
+                console.log("update tween");
+            });
+            fadeOut.onUpdate((obj) => {
+                setOpacity(this.pointers[id], obj.opacity);
+                setOpacity(this.shadowPlane, 0.1 * obj.opacity);
+                this._requestUpdate();
+                console.log("update tween");
+            })
+
+            lift.start();
+            this.tween = lift;
         }
         this._requestUpdate();
     }
