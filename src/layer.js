@@ -39,20 +39,19 @@ customElements.define("stylus-layer", class extends HTMLElement {
         const ambient = new THREE.AmbientLight( 0xffffff, 0.5 );
         this.scene.add( ambient );
 
-        const directionalLight = new THREE.DirectionalLight( 0xff0000, 1, 500 );
-        directionalLight.position.set( -100, 100, 200 );
+        const directionalLight = new THREE.DirectionalLight( 0x00ff00, 1, 500 );
+        directionalLight.position.set( -250, 250, 500 );
         directionalLight.castShadow = true;
         directionalLight.shadow.radius = 20;
         directionalLight.shadow.mapSize.width = 2056;
         directionalLight.shadow.mapSize.height = 2056;
         directionalLight.shadow.camera.left = 0;
         directionalLight.shadow.camera.right = window.innerWidth;
-        directionalLight.shadow.camera.top = window.innerHeight;
+        directionalLight.shadow.camera.top = window.innerHeight+200;
         directionalLight.shadow.camera.bottom = 0;
         directionalLight.shadow.camera.far = 1000;
-        directionalLight.shadow.camera.position.set(0,0,1000);
         this.scene.add( directionalLight );
-        this.scene.add(directionalLight.shadow.camera);
+        // this.scene.add( new THREE.CameraHelper(directionalLight.shadow.camera) );
 
         //Create a plane that receives shadows (but does not cast them)
         const planeGeometry = new THREE.PlaneGeometry( window.innerWidth, window.innerHeight, 32, 32 );
