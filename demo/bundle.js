@@ -15758,6 +15758,21 @@
       }
     }
   };
+  var ConeGeometry = class extends CylinderGeometry {
+    constructor(radius = 1, height = 1, radialSegments = 8, heightSegments = 1, openEnded = false, thetaStart = 0, thetaLength = Math.PI * 2) {
+      super(0, radius, height, radialSegments, heightSegments, openEnded, thetaStart, thetaLength);
+      this.type = "ConeGeometry";
+      this.parameters = {
+        radius,
+        height,
+        radialSegments,
+        heightSegments,
+        openEnded,
+        thetaStart,
+        thetaLength
+      };
+    }
+  };
   var _v0$2 = new Vector3();
   var _v1$5 = new Vector3();
   var _normal$1 = new Vector3();
@@ -16758,6 +16773,70 @@
     }
     return data;
   }
+  var SphereGeometry = class extends BufferGeometry {
+    constructor(radius = 1, widthSegments = 8, heightSegments = 6, phiStart = 0, phiLength = Math.PI * 2, thetaStart = 0, thetaLength = Math.PI) {
+      super();
+      this.type = "SphereGeometry";
+      this.parameters = {
+        radius,
+        widthSegments,
+        heightSegments,
+        phiStart,
+        phiLength,
+        thetaStart,
+        thetaLength
+      };
+      widthSegments = Math.max(3, Math.floor(widthSegments));
+      heightSegments = Math.max(2, Math.floor(heightSegments));
+      const thetaEnd = Math.min(thetaStart + thetaLength, Math.PI);
+      let index = 0;
+      const grid = [];
+      const vertex = new Vector3();
+      const normal = new Vector3();
+      const indices = [];
+      const vertices = [];
+      const normals = [];
+      const uvs = [];
+      for (let iy = 0; iy <= heightSegments; iy++) {
+        const verticesRow = [];
+        const v = iy / heightSegments;
+        let uOffset = 0;
+        if (iy == 0 && thetaStart == 0) {
+          uOffset = 0.5 / widthSegments;
+        } else if (iy == heightSegments && thetaEnd == Math.PI) {
+          uOffset = -0.5 / widthSegments;
+        }
+        for (let ix = 0; ix <= widthSegments; ix++) {
+          const u = ix / widthSegments;
+          vertex.x = -radius * Math.cos(phiStart + u * phiLength) * Math.sin(thetaStart + v * thetaLength);
+          vertex.y = radius * Math.cos(thetaStart + v * thetaLength);
+          vertex.z = radius * Math.sin(phiStart + u * phiLength) * Math.sin(thetaStart + v * thetaLength);
+          vertices.push(vertex.x, vertex.y, vertex.z);
+          normal.copy(vertex).normalize();
+          normals.push(normal.x, normal.y, normal.z);
+          uvs.push(u + uOffset, 1 - v);
+          verticesRow.push(index++);
+        }
+        grid.push(verticesRow);
+      }
+      for (let iy = 0; iy < heightSegments; iy++) {
+        for (let ix = 0; ix < widthSegments; ix++) {
+          const a = grid[iy][ix + 1];
+          const b = grid[iy][ix];
+          const c = grid[iy + 1][ix];
+          const d = grid[iy + 1][ix + 1];
+          if (iy !== 0 || thetaStart > 0)
+            indices.push(a, b, d);
+          if (iy !== heightSegments - 1 || thetaEnd < Math.PI)
+            indices.push(b, c, d);
+        }
+      }
+      this.setIndex(indices);
+      this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+      this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+      this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+    }
+  };
   var ShadowMaterial = class extends Material {
     constructor(parameters) {
       super();
@@ -23640,12 +23719,13 @@
       this.pointers = {};
       this.updateRequested = false;
       this.scene = new Scene();
-      this.camera = new PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1e3);
-      const z = window.innerHeight / 2 / Math.tan(30 / 360 * 2 * Math.PI);
-      this.camera.position.set(window.innerWidth / 2, window.innerHeight / 2, z);
+      this.camera = new OrthographicCamera(0, window.innerWidth, window.innerHeight, 0, 0.1, 1e3);
+      this.camera.position.set(0, 0, 500);
       this.renderer = new WebGLRenderer({alpha: true});
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.renderer.setClearColor(0, 0);
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = PCFSoftShadowMap;
       const shadowRoot = this.attachShadow({mode: "open"});
       shadowRoot.appendChild(this.renderer.domElement);
       const canvas = this.renderer.domElement;
@@ -23655,9 +23735,27 @@
       canvas.style.top = "0";
       const ambient = new AmbientLight(16777215, 0.5);
       this.scene.add(ambient);
-      const directionalLight = new DirectionalLight(16711680, 1);
-      directionalLight.position.set(-0.1, 0.1, 1);
+      const directionalLight = new DirectionalLight(16711680, 1, 500);
+      directionalLight.position.set(-100, 100, 200);
+      directionalLight.castShadow = true;
+      directionalLight.shadow.radius = 20;
+      directionalLight.shadow.mapSize.width = 2056;
+      directionalLight.shadow.mapSize.height = 2056;
+      directionalLight.shadow.camera.left = 0;
+      directionalLight.shadow.camera.right = window.innerWidth;
+      directionalLight.shadow.camera.top = window.innerHeight;
+      directionalLight.shadow.camera.bottom = 0;
+      directionalLight.shadow.camera.far = 1e3;
+      directionalLight.shadow.camera.position.set(0, 0, 1e3);
       this.scene.add(directionalLight);
+      this.scene.add(directionalLight.shadow.camera);
+      const planeGeometry = new PlaneGeometry(window.innerWidth, window.innerHeight, 32, 32);
+      const planeMaterial = new ShadowMaterial();
+      planeMaterial.opacity = 0.1;
+      const plane = new Mesh(planeGeometry, planeMaterial);
+      plane.receiveShadow = true;
+      plane.position.set(window.innerWidth / 2, window.innerHeight / 2, 0);
+      this.scene.add(plane);
       this.renderer.render(this.scene, this.camera);
     }
     connectedCallback() {
@@ -23677,22 +23775,43 @@
       }
     }
     _update() {
-      console.log("_update");
       this.renderer.render(this.scene, this.camera);
     }
     _createObject(e) {
+      if (e.pointerType === "mouse") {
+        return new Group();
+      }
+      if (e.pointerType === "touch") {
+        const material2 = new MeshBasicMaterial({color: 0, opacity: 0.2});
+        const geometry = new SphereGeometry(24, 32, 32);
+        const obj = new Mesh(geometry, material2);
+        this.scene.add(obj);
+        return obj;
+      }
       const STYLUS_RADIUS = 18;
-      const geometry = new CylinderGeometry(STYLUS_RADIUS, STYLUS_RADIUS, 100, 32);
+      const STYLUS_HEIGHT = 250;
+      const group = new Group();
       const material = new MeshPhongMaterial({color: 8421504, dithering: true});
-      const obj = new Mesh(geometry, material);
-      this.scene.add(obj);
-      obj.rotateX(90 / 360 * Math.PI * 2);
-      return obj;
+      const cylGeometry = new CylinderGeometry(STYLUS_RADIUS, STYLUS_RADIUS, STYLUS_HEIGHT, 32);
+      const cyl = new Mesh(cylGeometry, material);
+      cyl.castShadow = true;
+      cyl.rotateX(90 / 360 * Math.PI * 2);
+      cyl.position.set(0, 0, STYLUS_HEIGHT / 2 + STYLUS_RADIUS * 3);
+      group.add(cyl);
+      const coneGeometry = new ConeGeometry(STYLUS_RADIUS, STYLUS_RADIUS * 3, 32);
+      const cone = new Mesh(coneGeometry, material);
+      cone.castShadow = true;
+      cone.rotateX(-90 / 360 * Math.PI * 2);
+      cone.position.set(0, 0, STYLUS_RADIUS * 3 / 2);
+      group.add(cone);
+      group.rotateY(45 / 360 * Math.PI * 2);
+      this.scene.add(group);
+      return group;
     }
     _setObjPosition(obj, e) {
       const w2 = window.innerHeight / 2;
       const y = w2 - (e.clientY - w2);
-      obj.position.set(e.clientX, y, 50);
+      obj.position.set(e.clientX, y, 0);
     }
     _down(e) {
       this.pointers[e.pointerId] = this._createObject(e);

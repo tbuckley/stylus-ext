@@ -12,15 +12,17 @@ customElements.define("stylus-layer", class extends HTMLElement {
         this.scene = new THREE.Scene();
         
         // Camera
-        this.camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
-        const z = (window.innerHeight / 2) / Math.tan(30 / 360 * 2 * Math.PI);
-        this.camera.position.set(window.innerWidth/2, window.innerHeight/2, z);
-        // this.camera = new THREE.OrthographicCamera(0,window.innerWidth,0,window.innerHeight,0.1,1000);
+        // this.camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.1, 1000 );
+        // const z = (window.innerHeight / 2) / Math.tan(30 / 360 * 2 * Math.PI);
+        // this.camera.position.set(window.innerWidth/2, window.innerHeight/2, z);
+        this.camera = new THREE.OrthographicCamera(0,window.innerWidth,window.innerHeight,0,0.1,1000);
+        this.camera.position.set(0, 0, 500);
 
         this.renderer = new THREE.WebGLRenderer({ alpha: true });
         this.renderer.setSize( window.innerWidth, window.innerHeight );
         this.renderer.setClearColor( 0x000000, 0 );
-        
+        this.renderer.shadowMap.enabled = true;
+        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
         // Add canvas to DOM
         const shadowRoot = this.attachShadow({mode: 'open'});
@@ -32,14 +34,43 @@ customElements.define("stylus-layer", class extends HTMLElement {
         canvas.style.left = "0";
         canvas.style.top = "0";
 
-
+        // Add lights
         const ambient = new THREE.AmbientLight( 0xffffff, 0.5 );
         this.scene.add( ambient );
 
-        const directionalLight = new THREE.DirectionalLight( 0xff0000, 1 );
-        directionalLight.position.set( -0.1, 0.1, 1 );
-        this.scene.add( directionalLight );
+        // const light = new THREE.PointLight( 0xff0000, 1, 10000);
+        // light.position.set( 0, window.innerHeight, 500 );
+        // light.castShadow = true;
+        // light.shadow.mapSize.width = 2056;
+        // light.shadow.mapSize.height = 2056;
+        // light.shadow.radius = 12;
+        // light.shadow.camera.far = 1000;
+        // this.scene.add( light );
+        // this.scene.add(new THREE.CameraHelper(light.shadow.camera));
 
+        const directionalLight = new THREE.DirectionalLight( 0xff0000, 1, 500 );
+        directionalLight.position.set( -100, 100, 200 );
+        directionalLight.castShadow = true;
+        directionalLight.shadow.radius = 20;
+        directionalLight.shadow.mapSize.width = 2056;
+        directionalLight.shadow.mapSize.height = 2056;
+        directionalLight.shadow.camera.left = 0;
+        directionalLight.shadow.camera.right = window.innerWidth;
+        directionalLight.shadow.camera.top = window.innerHeight;
+        directionalLight.shadow.camera.bottom = 0;
+        directionalLight.shadow.camera.far = 1000;
+        directionalLight.shadow.camera.position.set(0,0,1000);
+        this.scene.add( directionalLight );
+        this.scene.add(directionalLight.shadow.camera);
+
+        //Create a plane that receives shadows (but does not cast them)
+        const planeGeometry = new THREE.PlaneGeometry( window.innerWidth, window.innerHeight, 32, 32 );
+        const planeMaterial = new THREE.ShadowMaterial();
+        planeMaterial.opacity = 0.1;
+        const plane = new THREE.Mesh( planeGeometry, planeMaterial );
+        plane.receiveShadow = true;
+        plane.position.set(window.innerWidth/2, window.innerHeight/2, 0);
+        this.scene.add( plane );
 
         this.renderer.render( this.scene, this.camera );
     }
@@ -63,27 +94,49 @@ customElements.define("stylus-layer", class extends HTMLElement {
         }
     }
     _update() {
-        console.log("_update");
         this.renderer.render( this.scene, this.camera );
     }
     _createObject(e) {
-        // const geometry = new THREE.BoxGeometry(48, 48, 48);
-        
+        if(e.pointerType === "mouse") {
+            return new THREE.Group();
+        }
+        if(e.pointerType === "touch") {
+            const material = new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 0.2 } );
+            const geometry = new THREE.SphereGeometry(24, 32, 32);
+            const obj = new THREE.Mesh( geometry, material );
+            this.scene.add(obj);
+            return obj;
+        }
         const STYLUS_RADIUS = 18;
-        const geometry = new THREE.CylinderGeometry( STYLUS_RADIUS, STYLUS_RADIUS, 100, 32 );
-        const material = new THREE.MeshPhongMaterial( { color: 0x808080, dithering: true } );
-        
-        const obj = new THREE.Mesh( geometry, material );
-        this.scene.add( obj );
+        const STYLUS_HEIGHT = 250;
 
-        obj.rotateX(90/360*Math.PI*2);
-        
-        return obj;
+        const group = new THREE.Group();
+        const material = new THREE.MeshPhongMaterial( { color: 0x808080, dithering: true } );
+
+        const cylGeometry = new THREE.CylinderGeometry( STYLUS_RADIUS, STYLUS_RADIUS, STYLUS_HEIGHT, 32 );
+        const cyl = new THREE.Mesh( cylGeometry, material );
+        cyl.castShadow = true
+        cyl.rotateX(90/360*Math.PI*2);
+        cyl.position.set(0, 0, STYLUS_HEIGHT/2+STYLUS_RADIUS*3);
+        group.add(cyl);
+
+        const coneGeometry = new THREE.ConeGeometry( STYLUS_RADIUS, STYLUS_RADIUS*3, 32 );
+        const cone = new THREE.Mesh( coneGeometry, material );
+        cone.castShadow = true
+        cone.rotateX(-90/360*Math.PI*2);
+        cone.position.set(0, 0, STYLUS_RADIUS*3/2);
+        group.add(cone);
+
+        group.rotateY(45/360*Math.PI*2);
+
+        this.scene.add( group );
+        return group;
     }
     _setObjPosition(obj, e) {
         const w2 = window.innerHeight / 2;
         const y = w2 - (e.clientY - w2);
-        obj.position.set( e.clientX, y, 50 );
+        obj.position.set( e.clientX, y, 0 );
+        // obj.position.set(e.clientX, e.clientY, 50);
     }
     _down(e) {
         this.pointers[e.pointerId] = this._createObject(e);
