@@ -147,25 +147,41 @@ customElements.define("stylus-layer", class extends HTMLElement {
            obj.rotation.x = deg2rad(e.tiltY);
         }
     }
+    _getId(e) {
+        if(e.pointerType === "pen") {
+            return "pen";
+        }
+        return e.pointerId;
+    }
     _down(e) {
-        this.pointers[e.pointerId] = this._createObject(e);
-        this._setObjPosition(this.pointers[e.pointerId], e);
+        const id = this._getId(e);
+        if(!(id in this.pointers)) {
+            this.pointers[id] = this._createObject(e);
+        }
+        this._setObjPosition(this.pointers[id], e);
         this._requestUpdate();
     }
     _move(e) {
-        if(e.pointerId in this.pointers) {
-            this._setObjPosition(this.pointers[e.pointerId], e);
+        const id = this._getId(e);
+        if(id in this.pointers) {
+            this._setObjPosition(this.pointers[id], e);
             this._requestUpdate();
         }
     }
     _up(e) {
-        this.scene.remove(this.pointers[e.pointerId]);
-        delete this.pointers[e.pointerId];
+        const id = this._getId(e);
+        if(e.pointerType !== "pen") {
+            this.scene.remove(this.pointers[id]);
+            delete this.pointers[id];
+        } else {
+            this.pointers[id].position.z = 50;
+        }
         this._requestUpdate();
     }
     _cancel(e) {
-        this.scene.remove(this.pointers[e.pointerId]);
-        delete this.pointers[e.pointerId];
+        const id = this._getId(e);
+        this.scene.remove(this.pointers[id]);
+        delete this.pointers[id];
         this._requestUpdate();
     }
 });
